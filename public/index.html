@@ -76,7 +76,12 @@ body[data-theme="light"] .brand{color:#29231b}body[data-theme="light"] .hero p{c
         <div class="seg"><button type="button" class="selected" data-privacy="private">🔒 Private</button><button type="button" data-privacy="public">🌐 Public</button></div>
         <label class="field"><span>Number of Rounds</span><select id="rounds"><option value="3">3 rounds · Quick</option><option value="5" selected>5 rounds · Standard</option><option value="10">10 rounds · Long</option><option value="15">15 rounds</option><option value="20">20 rounds</option><option value="30">30 rounds</option></select></label>
         <button class="primary" id="createBtn">Create Room <span>→</span></button>
-        <p class="note">Up to 15 players per room. Private rooms require an invite code.</p>
+        <div class="divider"></div>
+        <h2 style="font-size:16px">Quick Play</h2>
+        <p class="sub">Join a public match with real players only. The match starts after a 10-second countdown once at least 2 players are waiting.</p>
+        <button class="secondary" id="quickPlayBtn" style="width:100%">Find a Match →</button>
+        <div id="matchmakingPanel" class="status hidden" style="margin-top:12px"><span id="matchmakingText">Looking for real players…</span><button class="secondary" id="cancelMatchmakingBtn" style="margin-top:10px;width:100%">Cancel</button></div>
+        <p class="note">Up to 15 real players per room. No AI players are added.</p>
       </section>
       <section class="card hidden" id="joinPanel">
         <h2>Join Your Friends</h2>
@@ -194,6 +199,9 @@ function showGame(){ $("home").classList.add("hidden");$("game").classList.remov
 function switchTab(which){const create=which==="create";$("createPanel").classList.toggle("hidden",!create);$("joinPanel").classList.toggle("hidden",create);$("createTab").classList.toggle("active",create);$("joinTab").classList.toggle("active",!create)}
 $("createTab").onclick=()=>switchTab("create");$("joinTab").onclick=()=>switchTab("join");
 document.querySelectorAll("[data-privacy]").forEach(b=>b.onclick=()=>{privacy=b.dataset.privacy;document.querySelectorAll("[data-privacy]").forEach(x=>x.classList.toggle("selected",x===b))});
+$("quickPlayBtn").onclick=()=>{const playerName=$("createName").value.trim();if(!playerName)return toast("Please enter your name first.");$("quickPlayBtn").disabled=true;$("matchmakingPanel").classList.remove("hidden");socket.emit("matchmaking:join",{playerName})};
+$("cancelMatchmakingBtn").onclick=()=>{socket.emit("matchmaking:cancel");$("quickPlayBtn").disabled=false;$("matchmakingPanel").classList.add("hidden")};
+socket.on("matchmaking:status",data=>{if(data.queued){$("matchmakingPanel").classList.remove("hidden");$("quickPlayBtn").disabled=true;$("matchmakingText").textContent=data.message||"Looking for real players…"}else{$("quickPlayBtn").disabled=false;$("matchmakingPanel").classList.add("hidden");if(data.message&&data.message!=="You left matchmaking.")toast(data.message)}});
 $("createBtn").onclick=()=>{const playerName=$("createName").value.trim();if(!playerName)return toast("Please enter your name first.");socket.emit("room:create",{playerName,roomName:$("roomName").value.trim(),privacy,roundsTotal:Number($("rounds").value)})};
 $("joinBtn").onclick=()=>joinRoom($("joinCode").value,$("joinName").value);
 $("joinCode").addEventListener("input",e=>e.target.value=e.target.value.toUpperCase().replace(/[^A-Z0-9]/g,"").slice(0,6));
@@ -207,7 +215,7 @@ $("pickBtn").onclick=()=>{try{navigator.vibrate?.(45)}catch(e){}socket.emit("pap
 $("nextBtn").onclick=()=>socket.emit("game:next-round");
 $("lobbyBtn").onclick=()=>socket.emit("game:back-to-lobby");
 $("againBtn").onclick=()=>socket.emit("game:back-to-lobby");
-socket.on("room:joined",data=>{currentCode=data.code;myId=data.playerId;showGame();socket.emit("voice:join");$("codeText").textContent=currentCode;toast("Joined room. Voice chat is available from the mic menu.")});
+socket.on("room:joined",data=>{$("matchmakingPanel").classList.add("hidden");$("quickPlayBtn").disabled=false;currentCode=data.code;myId=data.playerId;showGame();socket.emit("voice:join");$("codeText").textContent=currentCode;toast("Joined room. Voice chat is available from the mic menu.")});
 socket.on("app:error",message=>toast(message));
 socket.on("room:left",()=>{socket.emit("voice:leave");showHome();socket.emit("rooms:list")});
 socket.on("round:new",()=>{playPaperSound();const pa=$("paperArea");pa.classList.remove("shaking","revealing","picked");void pa.offsetWidth;pa.classList.add("shaking");try{navigator.vibrate?.([90,45,90,45,130])}catch(e){}$("pickBtn").disabled=true;$("paperHint").textContent="Shaking the jar…";setTimeout(()=>{pa.classList.remove("shaking");$("pickBtn").disabled=false;$("paperHint").textContent="Pick your paper"},2500);myRole=null;$("roleCard").classList.add("hidden");$("pickBtn").classList.remove("hidden");$("pickBtn").textContent="Pick a paper";$("suspects").innerHTML=""});

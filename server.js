@@ -13,6 +13,10 @@ app.get("/health", (_, res) => res.json({ ok: true }));
 
 const rooms = new Map();
 const namesBySocket = new Map();
+const matchmakingQueue = [];
+let matchmakingTimer = null;
+let matchmakingTick = null;
+let matchmakingDeadline = 0;
 
 function makeCode() {
   let code;
@@ -71,6 +75,82 @@ function leaveCurrent(socket) {
     room.message = "ചിലർ പുറത്തുപോയി. മുറി വീണ്ടും കാത്തിരിപ്പ് നിലയിലായി.";
   }
   emitRoom(room);
+}
+
+function broadcastMatchmakingStatus() {
+  const waiting = matchmakingQueue.length;
+  const seconds = matchmakingDeadline ? Math.max(0, Math.ceil((matchmakingDeadline - Date.now()) / 1000)) : null;
+  for (const id of matchmakingQueue) {
+    io.to(id).emit("matchmaking:status", {
+      queued: true,
+      waiting,
+      maxPlayers: 15,
+      seconds,
+      message: waiting < 2
+        ? "Waiting for real players… At least 2 players are needed."
+        : `Match starts in ${seconds ?? 10} seconds · ${waiting} real players waiting.`
+    });
+  }
+}
+function stopMatchmakingClock() {
+  if (matchmakingTimer) clearTimeout(matchmakingTimer);
+  if (matchmakingTick) clearInterval(matchmakingTick);
+  matchmakingTimer = null;
+  matchmakingTick = null;
+  matchmakingDeadline = 0;
+}
+function startMatchmakingClock() {
+  if (matchmakingTimer || matchmakingQueue.length < 2) {
+    broadcastMatchmakingStatus();
+    return;
+  }
+  matchmakingDeadline = Date.now() + 10000;
+  broadcastMatchmakingStatus();
+  matchmakingTick = setInterval(broadcastMatchmakingStatus, 1000);
+  matchmakingTimer = setTimeout(() => {
+    stopMatchmakingClock();
+    const valid = matchmakingQueue.filter(id => io.sockets.sockets.has(id));
+    matchmakingQueue.splice(0, matchmakingQueue.length, ...valid);
+    if (matchmakingQueue.length < 2) {
+      broadcastMatchmakingStatus();
+      return;
+    }
+    const ids = matchmakingQueue.splice(0, 15);
+    const code = makeCode();
+    const roundsTotal = 5;
+    const room = {
+      code, name: "Quick Match", privacy: "public", roundsTotal, round: 1,
+      phase: "lobby", hostId: ids[0], players: new Map(), secrets: new Map(),
+      policeId: null, policeGuess: null, lastResult: null,
+      message: "Quick match ready. Starting your game…"
+    };
+    for (const id of ids) {
+      const playerSocket = io.sockets.sockets.get(id);
+      if (!playerSocket) continue;
+      const name = namesBySocket.get(id) || "Player";
+      room.players.set(id, { id, name, score: 0, ready: false });
+      playerSocket.data.roomCode = code;
+      playerSocket.join(code);
+      playerSocket.emit("matchmaking:status", { queued: false, message: "Match found! Joining game…" });
+      playerSocket.emit("room:joined", { code, playerId: id });
+    }
+    if (room.players.size >= 2) {
+      rooms.set(code, room);
+      emitRoom(room);
+      io.emit("rooms:changed");
+      room.phase = "choosing";
+      startRound(room);
+    }
+    if (matchmakingQueue.length >= 2) startMatchmakingClock();
+    else broadcastMatchmakingStatus();
+  }, 10000);
+}
+function removeFromMatchmaking(socket) {
+  const index = matchmakingQueue.indexOf(socket.id);
+  if (index >= 0) matchmakingQueue.splice(index, 1);
+  socket.emit("matchmaking:status", { queued: false, message: "You left matchmaking." });
+  if (matchmakingQueue.length < 2) stopMatchmakingClock();
+  broadcastMatchmakingStatus();
 }
 
 function roleDeck(playerCount) {
@@ -139,6 +219,18 @@ function finishRound(room, guessId) {
 }
 
 io.on("connection", socket => {
+  socket.on("matchmaking:join", payload => {
+    const name = cleanName(payload?.playerName);
+    if (!name || name === "Player") return sendError(socket, "Please enter your name first.");
+    leaveCurrent(socket);
+    removeFromMatchmaking(socket);
+    namesBySocket.set(socket.id, name);
+    if (matchmakingQueue.length >= 1000) return sendError(socket, "Matchmaking is busy. Please try again shortly.");
+    matchmakingQueue.push(socket.id);
+    socket.emit("matchmaking:status", { queued: true, waiting: matchmakingQueue.length, maxPlayers: 15, seconds: matchmakingQueue.length >= 2 ? 10 : null, message: matchmakingQueue.length < 2 ? "Waiting for real players… At least 2 players are needed." : "Players found. Match starts in 10 seconds." });
+    startMatchmakingClock();
+  });
+  socket.on("matchmaking:cancel", () => removeFromMatchmaking(socket));
   socket.on("rooms:list", () => {
     socket.emit("rooms:list", [...rooms.values()]
       .filter(r => r.privacy === "public" && r.phase === "lobby")
@@ -293,6 +385,9 @@ io.on("connection", socket => {
   });
 
   socket.on("disconnect", () => {
+    const queueIndex = matchmakingQueue.indexOf(socket.id);
+    if (queueIndex >= 0) matchmakingQueue.splice(queueIndex, 1);
+    if (matchmakingQueue.length < 2) stopMatchmakingClock(); else broadcastMatchmakingStatus();
     leaveCurrent(socket);
     namesBySocket.delete(socket.id);
     io.emit("rooms:changed");
