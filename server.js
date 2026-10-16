@@ -55,6 +55,7 @@ function getRoomFor(socket) {
 function leaveCurrent(socket) {
   const room = getRoomFor(socket);
   if (!room) return;
+  socket.to(room.code).emit("voice:peer-left", { peerId: socket.id });
   room.players.delete(socket.id);
   socket.leave(room.code);
   socket.data.roomCode = null;
@@ -74,9 +75,7 @@ function leaveCurrent(socket) {
 
 function roleDeck(playerCount) {
   // Each round always has one police and one thief. Extra roles are optional flavor roles.
-  const roles = ["Police", "Thief"];
-  const extras = ["King", "Minister", "Detective", "Citizen"];
-  while (roles.length < playerCount) roles.push(extras[(roles.length - 2) % extras.length]);
+  const roles = ["Police", "Thief", "King", "Minister", "Queen", "Doctor", "Detective", "Guard", "Milkman", "Farmer", "Trader", "Teacher", "Soldier", "Fisherman", "Citizen"];
   return roles.slice(0, playerCount);
 }
 function shuffle(list) {
@@ -130,9 +129,9 @@ function finishRound(room, guessId) {
     thiefId,
     guessId,
     correct,
-    policeName: room.players.get(room.policeId)?.name || "Police",
-    thiefName: room.players.get(thiefId)?.name || "Thief",
-    guessedName: room.players.get(guessId)?.name || "Unknown"
+    policeName: room.players.get(room.policeId)?.name || "പോലീസ്",
+    thiefName: room.players.get(thiefId)?.name || "കള്ളൻ",
+    guessedName: room.players.get(guessId)?.name || "അറിയില്ല"
   };
   room.phase = "result";
   room.message = correct ? "ശരിയായ ഉത്തരം! പോലീസ് കള്ളനെ പിടിച്ചു." : "തെറ്റായ ഉത്തരം! കള്ളന് 100 പോയിന്റ് ലഭിച്ചു.";
@@ -161,7 +160,7 @@ io.on("connection", socket => {
       phase: "lobby", hostId: socket.id,
       players: new Map(), secrets: new Map(),
       policeId: null, policeGuess: null, lastResult: null,
-      message: "Waiting for friends to join."
+      message: "സുഹൃത്തുക്കൾ ചേരാൻ കാത്തിരിക്കുന്നു…"
     };
     room.players.set(socket.id, { id: socket.id, name, score: 0, ready: false });
     rooms.set(code, room);
@@ -178,7 +177,7 @@ io.on("connection", socket => {
     const room = rooms.get(code);
     if (!room) return sendError(socket, "മുറി കണ്ടെത്താനായില്ല. റൂം കോഡ് പരിശോധിക്കൂ.");
     if (room.phase !== "lobby") return sendError(socket, "കളി ഇതിനകം തുടങ്ങിയിട്ടുണ്ട്.");
-    if (room.players.size >= 12) return sendError(socket, "മുറി നിറഞ്ഞു (പരമാവധി 12 പേർ).");;
+    if (room.players.size >= 15) return sendError(socket, "മുറി നിറഞ്ഞു (പരമാവധി 15 പേർ).");
     leaveCurrent(socket);
     const name = cleanName(payload?.playerName);
     room.players.set(socket.id, { id: socket.id, name, score: 0, ready: false });
@@ -189,6 +188,22 @@ io.on("connection", socket => {
     room.message = `${name} joined the room.`;
     emitRoom(room);
     io.emit("rooms:changed");
+  });
+
+  socket.on("voice:join", () => {
+    const room = getRoomFor(socket);
+    if (!room) return;
+    socket.emit("voice:peers", [...room.players.keys()].filter(id => id !== socket.id));
+    socket.to(room.code).emit("voice:peer-joined", { peerId: socket.id });
+  });
+  socket.on("voice:signal", payload => {
+    const room = getRoomFor(socket);
+    if (!room || !payload || !payload.to || !room.players.has(payload.to)) return;
+    io.to(payload.to).emit("voice:signal", { from: socket.id, signal: payload.signal });
+  });
+  socket.on("voice:leave", () => {
+    const room = getRoomFor(socket);
+    if (room) socket.to(room.code).emit("voice:peer-left", { peerId: socket.id });
   });
 
   socket.on("room:join-public", payload => {
