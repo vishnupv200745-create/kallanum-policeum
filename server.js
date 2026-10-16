@@ -67,7 +67,7 @@ function leaveCurrent(socket) {
     room.phase = "lobby";
     room.round = 0;
     room.secrets = new Map();
-    room.message = "Players left. The room returned to the lobby.";
+    room.message = "ചിലർ പുറത്തുപോയി. മുറി വീണ്ടും കാത്തിരിപ്പ് നിലയിലായി.";
   }
   emitRoom(room);
 }
@@ -91,7 +91,7 @@ function startRound(room) {
   const players = [...room.players.values()];
   if (players.length < 2) {
     room.phase = "lobby";
-    room.message = "At least 2 players are needed.";
+    room.message = "കളിക്കാൻ കുറഞ്ഞത് 2 പേർ വേണം.";
     emitRoom(room);
     return;
   }
@@ -104,7 +104,7 @@ function startRound(room) {
   room.policeGuess = null;
   room.lastResult = null;
   room.phase = "choosing";
-  room.message = "The papers have been shuffled. Everyone, pick your paper!";
+  room.message = "കടലാസുകൾ കലക്കി തയ്യാറാക്കി! എല്ലാവരും ഓരോ കടലാസ് തിരഞ്ഞെടുക്കൂ.";
   room.players.forEach(p => { p.ready = false; });
   room.players.forEach(p => io.to(p.id).emit("round:new", { round: room.round }));
   emitRoom(room);
@@ -115,8 +115,16 @@ function finishRound(room, guessId) {
   const thiefId = thief[0];
   const correct = guessId === thiefId;
   const police = room.players.get(room.policeId);
-  if (correct && police) police.score += 2;
-  if (!correct && room.players.has(thiefId)) room.players.get(thiefId).score += 2;
+  // Traditional role points: King 1000, Minister 500.
+  // Police gets 100 for a correct guess; otherwise the thief gets 100.
+  for (const [playerId, role] of room.secrets.entries()) {
+    const player = room.players.get(playerId);
+    if (!player) continue;
+    if (role === "King") player.score += 1000;
+    if (role === "Minister") player.score += 500;
+  }
+  if (correct && police) police.score += 100;
+  if (!correct && room.players.has(thiefId)) room.players.get(thiefId).score += 100;
   room.lastResult = {
     policeId: room.policeId,
     thiefId,
@@ -127,7 +135,7 @@ function finishRound(room, guessId) {
     guessedName: room.players.get(guessId)?.name || "Unknown"
   };
   room.phase = "result";
-  room.message = correct ? "Correct! The police caught the thief." : "Wrong guess! The thief escaped.";
+  room.message = correct ? "ശരിയായ ഉത്തരം! പോലീസ് കള്ളനെ പിടിച്ചു." : "തെറ്റായ ഉത്തരം! കള്ളന് 100 പോയിന്റ് ലഭിച്ചു.";
   emitRoom(room);
 }
 
@@ -168,9 +176,9 @@ io.on("connection", socket => {
   socket.on("room:join", payload => {
     const code = String(payload?.code || "").trim().toUpperCase();
     const room = rooms.get(code);
-    if (!room) return sendError(socket, "Room not found. Check the room code.");
-    if (room.phase !== "lobby") return sendError(socket, "This game has already started.");
-    if (room.players.size >= 12) return sendError(socket, "This room is full (maximum 12 players).");
+    if (!room) return sendError(socket, "മുറി കണ്ടെത്താനായില്ല. റൂം കോഡ് പരിശോധിക്കൂ.");
+    if (room.phase !== "lobby") return sendError(socket, "കളി ഇതിനകം തുടങ്ങിയിട്ടുണ്ട്.");
+    if (room.players.size >= 12) return sendError(socket, "മുറി നിറഞ്ഞു (പരമാവധി 12 പേർ).");;
     leaveCurrent(socket);
     const name = cleanName(payload?.playerName);
     room.players.set(socket.id, { id: socket.id, name, score: 0, ready: false });
@@ -192,9 +200,9 @@ io.on("connection", socket => {
 
   socket.on("game:start", () => {
     const room = getRoomFor(socket);
-    if (!room) return sendError(socket, "Join a room first.");
-    if (room.hostId !== socket.id) return sendError(socket, "Only the room host can start the game.");
-    if (room.players.size < 2) return sendError(socket, "Invite at least one friend before starting.");
+    if (!room) return sendError(socket, "ആദ്യം ഒരു മുറിയിൽ ചേരൂ.");
+    if (room.hostId !== socket.id) return sendError(socket, "മുറിയുടെ ഹോസ്റ്റിന് മാത്രമേ കളി തുടങ്ങാനാകൂ.");
+    if (room.players.size < 2) return sendError(socket, "കളി തുടങ്ങാൻ കുറഞ്ഞത് ഒരു സുഹൃത്തിനെയെങ്കിലും ചേർക്കൂ.");
     room.round = 1;
     room.players.forEach(p => { p.score = 0; });
     startRound(room);
@@ -211,12 +219,12 @@ io.on("connection", socket => {
       round: room.round,
       roomCode: room.code
     });
-    room.message = "Players are picking their shuffled papers…";
+    room.message = "കളിക്കാർ കലക്കിയ കടലാസുകളിൽ നിന്ന് തിരഞ്ഞെടുക്കുന്നു…";
     emitRoom(room);
     const everyonePicked = [...room.players.values()].every(p => p.ready);
     if (everyonePicked) {
       room.phase = "police-turn";
-      room.message = "Everyone has picked. Police, choose who you think is the thief!";
+      room.message = "എല്ലാവരും കടലാസ് എടുത്തു. പോലീസ്, കള്ളനെന്ന് സംശയിക്കുന്ന ആളെ തിരഞ്ഞെടുക്കൂ!";
       emitRoom(room);
       io.to(room.policeId).emit("police:turn", {
         players: [...room.players.values()].filter(p => p.id !== room.policeId)
@@ -228,9 +236,9 @@ io.on("connection", socket => {
   socket.on("police:guess", payload => {
     const room = getRoomFor(socket);
     if (!room || room.phase !== "police-turn") return;
-    if (socket.id !== room.policeId) return sendError(socket, "Only the police can make the guess.");
+    if (socket.id !== room.policeId) return sendError(socket, "പോലീസിന് മാത്രമേ സംശയിക്കുന്ന ആളെ തിരഞ്ഞെടുക്കാനാകൂ.");
     const guessId = String(payload?.playerId || "");
-    if (!room.players.has(guessId) || guessId === socket.id) return sendError(socket, "Choose another player.");
+    if (!room.players.has(guessId) || guessId === socket.id) return sendError(socket, "മറ്റൊരു കളിക്കാരനെ തിരഞ്ഞെടുക്കൂ.");
     room.policeGuess = guessId;
     finishRound(room, guessId);
   });
@@ -238,11 +246,11 @@ io.on("connection", socket => {
   socket.on("game:next-round", () => {
     const room = getRoomFor(socket);
     if (!room) return;
-    if (room.hostId !== socket.id) return sendError(socket, "Only the host can continue.");
+    if (room.hostId !== socket.id) return sendError(socket, "ഹോസ്റ്റിന് മാത്രമേ അടുത്ത റൗണ്ടിലേക്ക് പോകാനാകൂ.");
     if (room.phase !== "result") return;
     if (room.round >= room.roundsTotal) {
       room.phase = "finished";
-      room.message = "Game over! Final scores are ready.";
+      room.message = "കളി കഴിഞ്ഞു! അന്തിമ പോയിന്റുകൾ താഴെ കാണാം.";
       emitRoom(room);
     } else {
       room.round += 1;
@@ -259,7 +267,7 @@ io.on("connection", socket => {
     room.lastResult = null;
     room.policeId = null;
     room.players.forEach(p => { p.score = 0; p.ready = false; });
-    room.message = "Back in the lobby. Start a new game when ready.";
+    room.message = "വീണ്ടും കാത്തിരിപ്പ് മുറിയിൽ. തയ്യാറാകുമ്പോൾ കളി തുടങ്ങൂ.";
     emitRoom(room);
   });
 
