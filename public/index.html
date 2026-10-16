@@ -94,7 +94,7 @@ body[data-theme="light"] .brand{color:#29231b}body[data-theme="light"] .hero p{c
       </section>
       <section class="card" id="publicCard">
         <h2>🌐 Public Rooms</h2>
-        <p class="sub">Join a public room waiting for players.</p>
+        <p class="sub">Join an available public room. Rooms start automatically when players join.</p>
         <div class="room-list" id="publicRooms"><div class="empty">Loading public rooms…</div></div>
         <div class="divider"></div>
         <h2>How to Play</h2>
@@ -222,7 +222,7 @@ socket.on("round:new",()=>{playPaperSound();const pa=$("paperArea");pa.classList
 socket.on("role:private",data=>{myRole=data.role;const info=roleInfo[myRole]||roleInfo.Citizen;const pa=$("paperArea");pa.classList.remove("shaking");pa.classList.add("revealing","picked");playPaperSound();try{navigator.vibrate?.([35,25,60])}catch(e){}$("drawnPaper").querySelector("span").textContent=roleNames[myRole]||myRole;$("roleIcon").textContent=info.icon;$("roleName").textContent=roleNames[myRole]||myRole;$("roleNote").textContent=info.note;$("rolePoints").textContent=(rolePoints[myRole]??0).toLocaleString("en-IN")+" Points";$("roleCard").classList.remove("hidden");$("pickBtn").classList.add("hidden");$("pickBtn").textContent="Paper picked";$("pickBtn").disabled=true});
 socket.on("police:turn",data=>{if(!roomState)return;renderSuspects(data.players)});
 socket.on("rooms:changed",()=>socket.emit("rooms:list"));
-socket.on("rooms:list",list=>{const root=$("publicRooms");if(!list.length){root.innerHTML='<div class="empty">No public rooms yet. Create a room and invite your friends!</div>';return}root.innerHTML="";list.forEach(r=>{const el=document.createElement("div");el.className="room-item";const info=document.createElement("div");const title=document.createElement("strong");title.textContent=r.name;const small=document.createElement("small");small.textContent=`${r.count}/15 players · ${r.roundsTotal} rounds`;info.append(title,small);const btn=document.createElement("button");btn.className="join-small";btn.textContent="Join";btn.onclick=()=>{switchTab("join");$("joinCode").value=r.code;$("joinName").value=$("createName").value;joinRoom(r.code,$("joinName").value)};el.append(info,btn);root.append(el)})});
+socket.on("rooms:list",list=>{const root=$("publicRooms");if(!list.length){root.innerHTML='<div class="empty">No public rooms are available right now. Please try again.</div>';return}root.innerHTML="";list.forEach(r=>{const el=document.createElement("div");el.className="room-item";const info=document.createElement("div");const title=document.createElement("strong");title.textContent=r.name;const small=document.createElement("small");small.textContent=`${r.count}/15 players · ${r.roundsTotal} rounds`;info.append(title,small);const btn=document.createElement("button");btn.className="join-small";btn.textContent="Join";btn.onclick=()=>{switchTab("join");$("joinCode").value=r.code;$("joinName").value=$("createName").value;joinRoom(r.code,$("joinName").value)};el.append(info,btn);root.append(el)})});
 socket.on("room:update",room=>{roomState=room;renderRoom(room)});
 function renderRoom(room){
   document.getElementById("game").classList.toggle("playing-mode",room.phase!=="lobby");
@@ -232,7 +232,17 @@ function renderRoom(room){
   ["lobbyActions","pickArea","policeArea","resultArea","finishedArea"].forEach(id=>$(id).classList.add("hidden"));
   $("statusBox").classList.remove("hidden");
   if(room.phase==="lobby"){
-    $("statusBox").textContent=room.message||"Waiting for friends…";$("lobbyActions").classList.remove("hidden");$("startBtn").disabled=room.hostId!==myId||room.players.length<2;$("startBtn").textContent=room.hostId===myId?"Start Game →":"Waiting for the host to start…";
+    $("statusBox").textContent=room.message||"Waiting for friends…";
+    if(room.autoManaged){
+      $("lobbyActions").classList.remove("hidden");
+      $("startBtn").classList.add("hidden");
+      $("leaveBtn").textContent="Leave Room";
+    }else{
+      $("lobbyActions").classList.remove("hidden");
+      $("startBtn").classList.remove("hidden");
+      $("startBtn").disabled=room.hostId!==myId||room.players.length<2;
+      $("startBtn").textContent=room.hostId===myId?"Start Game →":"Waiting for the host to start…";
+    }
   }else if(room.phase==="choosing"){
     $("pickArea").classList.remove("hidden");$("pickBtn").classList.remove("hidden");$("statusBox").textContent=`Round ${room.round}: Pick your paper. Keep your role secret.`;$("pickBtn").disabled=!!room.players.find(p=>p.id===myId)?.ready;
     if(!myRole){$("roleCard").classList.add("hidden");$("pickBtn").textContent="Pick a Paper 🎴"}else{$("roleCard").classList.remove("hidden");$("pickBtn").textContent="Paper picked ✓"}
@@ -241,12 +251,12 @@ function renderRoom(room){
     if(room.policeId===myId){$("policeArea").classList.remove("hidden");if(!$("suspects").children.length)renderSuspects(room.players.filter(p=>p.id!==myId).map(p=>({id:p.id,name:p.name})))}else{$("policeArea").classList.add("hidden");$("roleCard").classList.remove("hidden")}
   }else if(room.phase==="result"){
     $("statusBox").textContent=room.message;$("resultArea").classList.remove("hidden");$("pickArea").classList.add("hidden");renderResult(room);
-    $("nextBtn").classList.toggle("hidden",room.hostId!==myId);$("lobbyBtn").classList.toggle("hidden",room.hostId!==myId);$("nextBtn").textContent=room.round>=room.roundsTotal?"Finish Game →":"Next Round →";
+    $("nextBtn").classList.toggle("hidden",room.autoManaged||room.hostId!==myId);$("lobbyBtn").classList.toggle("hidden",room.autoManaged||room.hostId!==myId);$("nextBtn").textContent=room.round>=room.roundsTotal?"Finish Game →":"Next Round →";
   }else if(room.phase==="finished"){
     $("statusBox").classList.add("hidden");$("finishedArea").classList.remove("hidden");$("pickArea").classList.add("hidden");
     const sorted=[...room.players].sort((a,b)=>b.score-a.score);$("winnerText").textContent=sorted.length?`${sorted[0].name} leads with ${sorted[0].score} Points!`:"Final scores are ready.";
     $("finalScores").innerHTML=sorted.map((p,i)=>`<div class="score-row"><span>${i===0?"🥇":i===1?"🥈":i===2?"🥉":"🎮"} ${escapeHtml(p.name)}</span><span class="score">${p.score} Points</span></div>`).join("");
-    $("againBtn").classList.toggle("hidden",room.hostId!==myId);
+    $("againBtn").classList.toggle("hidden",room.autoManaged||room.hostId!==myId);
   }
 }
 function renderSuspects(players){$("suspects").innerHTML="";players.forEach(p=>{const btn=document.createElement("button");btn.className="suspect";const av=document.createElement("span");av.style.fontSize="24px";av.textContent="🕵️";const name=document.createElement("strong");name.textContent=p.name;btn.append(av,name);btn.onclick=()=>{if(window.confirm(`Are you sure ${p.name} is the Thief?`))socket.emit("police:guess",{playerId:p.id})};$("suspects").append(btn)})}

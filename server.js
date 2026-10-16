@@ -29,6 +29,7 @@ function cleanName(value) {
 }
 function publicRoom(room) {
   return {
+    autoManaged: !!room.autoManaged,
     code: room.code,
     name: room.name,
     privacy: room.privacy,
@@ -56,6 +57,24 @@ function getRoomFor(socket) {
   const code = socket.data.roomCode;
   return code ? rooms.get(code) : null;
 }
+function clearAutoStart(room) {
+  if (room && room.autoStartTimer) {
+    clearTimeout(room.autoStartTimer);
+    room.autoStartTimer = null;
+  }
+}
+function scheduleAutoRoomStart(room) {
+  if (!room || !room.autoManaged || room.phase !== "lobby" || room.players.size < 2 || room.autoStartTimer) return;
+  room.message = "The game will start automatically in 10 seconds.";
+  emitRoom(room);
+  room.autoStartTimer = setTimeout(() => {
+    room.autoStartTimer = null;
+    if (!rooms.has(room.code) || room.phase !== "lobby" || room.players.size < 2) return;
+    room.round = 1;
+    room.players.forEach(p => { p.score = 0; p.ready = false; });
+    startRound(room);
+  }, 10000);
+}
 function leaveCurrent(socket) {
   const room = getRoomFor(socket);
   if (!room) return;
@@ -64,9 +83,23 @@ function leaveCurrent(socket) {
   socket.leave(room.code);
   socket.data.roomCode = null;
   if (!room.players.size) {
-    rooms.delete(room.code);
+    clearAutoStart(room);
+    if (room.autoManaged) {
+      room.phase = "lobby";
+      room.round = 0;
+      room.hostId = null;
+      room.secrets = new Map();
+      room.policeId = null;
+      room.policeGuess = null;
+      room.lastResult = null;
+      room.message = "Join this room to play.";
+      io.emit("rooms:changed");
+    } else {
+      rooms.delete(room.code);
+    }
     return;
   }
+  if (room.autoManaged && room.players.size < 2 && room.phase === "lobby") clearAutoStart(room);
   if (room.hostId === socket.id) room.hostId = room.players.keys().next().value;
   if (room.phase !== "lobby" && room.players.size < 2) {
     room.phase = "lobby";
@@ -75,6 +108,7 @@ function leaveCurrent(socket) {
     room.message = "ചിലർ പുറത്തുപോയി. മുറി വീണ്ടും കാത്തിരിപ്പ് നിലയിലായി.";
   }
   emitRoom(room);
+  io.emit("rooms:changed");
 }
 
 function broadcastMatchmakingStatus() {
@@ -187,6 +221,7 @@ function startRound(room) {
   room.players.forEach(p => { p.ready = false; });
   room.players.forEach(p => io.to(p.id).emit("round:new", { round: room.round }));
   emitRoom(room);
+  io.emit("rooms:changed");
 }
 function finishRound(room, guessId) {
   const thief = [...room.secrets.entries()].find(([, role]) => role === "Thief");
@@ -214,8 +249,35 @@ function finishRound(room, guessId) {
     guessedName: room.players.get(guessId)?.name || "അറിയില്ല"
   };
   room.phase = "result";
-  room.message = correct ? "ശരിയായ ഉത്തരം! പോലീസ് കള്ളനെ പിടിച്ചു." : "തെറ്റായ ഉത്തരം! കള്ളന് 100 പോയിന്റ് ലഭിച്ചു.";
+  room.message = correct ? "Correct! The Police caught the Thief." : "Wrong guess! The Thief gets 100 points.";
   emitRoom(room);
+  if (room.autoManaged) {
+    setTimeout(() => {
+      if (!rooms.has(room.code) || room.phase !== "result") return;
+      if (room.players.size < 2) {
+        room.phase = "lobby"; room.round = 0; room.secrets = new Map();
+        room.message = "Join this room to play."; emitRoom(room); io.emit("rooms:changed"); return;
+      }
+      if (room.round < room.roundsTotal) {
+        room.round += 1;
+        startRound(room);
+      } else {
+        room.phase = "finished";
+        room.message = "Game finished! The next game will start automatically.";
+        emitRoom(room);
+        setTimeout(() => {
+          if (!rooms.has(room.code) || room.players.size < 2) {
+            if (rooms.has(room.code)) { room.phase = "lobby"; room.round = 0; room.message = "Join this room to play."; emitRoom(room); io.emit("rooms:changed"); }
+            return;
+          }
+          room.phase = "lobby"; room.round = 0; room.lastResult = null; room.policeId = null; room.policeGuess = null;
+          room.players.forEach(p => { p.score = 0; p.ready = false; });
+          room.message = "New game starts automatically in 10 seconds.";
+          emitRoom(room); io.emit("rooms:changed"); scheduleAutoRoomStart(room);
+        }, 4000);
+      }
+    }, 4000);
+  }
 }
 
 io.on("connection", socket => {
@@ -236,7 +298,7 @@ io.on("connection", socket => {
       .filter(r => r.privacy === "public" && r.phase === "lobby")
       .map(r => ({
         code: r.code, name: r.name, count: r.players.size,
-        roundsTotal: r.roundsTotal
+        roundsTotal: r.roundsTotal, autoManaged: !!r.autoManaged
       })));
   });
 
@@ -280,6 +342,7 @@ io.on("connection", socket => {
     room.message = `${name} joined the room.`;
     emitRoom(room);
     io.emit("rooms:changed");
+    if (room.autoManaged) scheduleAutoRoomStart(room);
   });
 
   socket.on("voice:join", () => {
@@ -307,8 +370,9 @@ io.on("connection", socket => {
 
   socket.on("game:start", () => {
     const room = getRoomFor(socket);
-    if (!room) return sendError(socket, "ആദ്യം ഒരു മുറിയിൽ ചേരൂ.");
-    if (room.hostId !== socket.id) return sendError(socket, "മുറിയുടെ ഹോസ്റ്റിന് മാത്രമേ കളി തുടങ്ങാനാകൂ.");
+    if (!room) return sendError(socket, "Please join a room first.");
+    if (room.autoManaged) return sendError(socket, "This public room starts automatically.");
+    if (room.hostId !== socket.id) return sendError(socket, "Only the room host can start the game.");
     if (room.players.size < 2) return sendError(socket, "കളി തുടങ്ങാൻ കുറഞ്ഞത് ഒരു സുഹൃത്തിനെയെങ്കിലും ചേർക്കൂ.");
     room.round = 1;
     room.players.forEach(p => { p.score = 0; });
@@ -353,11 +417,12 @@ io.on("connection", socket => {
   socket.on("game:next-round", () => {
     const room = getRoomFor(socket);
     if (!room) return;
-    if (room.hostId !== socket.id) return sendError(socket, "ഹോസ്റ്റിന് മാത്രമേ അടുത്ത റൗണ്ടിലേക്ക് പോകാനാകൂ.");
+    if (room.autoManaged) return sendError(socket, "Public rooms advance automatically.");
+    if (room.hostId !== socket.id) return sendError(socket, "Only the host can advance the round.");
     if (room.phase !== "result") return;
     if (room.round >= room.roundsTotal) {
       room.phase = "finished";
-      room.message = "കളി കഴിഞ്ഞു! അന്തിമ പോയിന്റുകൾ താഴെ കാണാം.";
+      room.message = "Game finished! Final scores are below.";
       emitRoom(room);
     } else {
       room.round += 1;
@@ -393,5 +458,16 @@ io.on("connection", socket => {
     io.emit("rooms:changed");
   });
 });
+
+// Keep ten public rooms available. They contain real players only and never add bots.
+for (let i = 1; i <= 10; i++) {
+  const code = makeCode();
+  rooms.set(code, {
+    code, name: `Kerala Public Room ${i}`, privacy: "public", roundsTotal: 5, round: 0,
+    phase: "lobby", hostId: null, players: new Map(), secrets: new Map(),
+    policeId: null, policeGuess: null, lastResult: null,
+    autoManaged: true, autoStartTimer: null, message: "Join this room to play."
+  });
+}
 
 server.listen(PORT, () => console.log(`Kallanum Policeum is running on port ${PORT}`));
