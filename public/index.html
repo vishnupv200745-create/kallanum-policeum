@@ -1,10 +1,10 @@
 <!doctype html>
-<html lang="ml">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#10101b">
-<title>കള്ളനും പോലീസും — സുഹൃത്തുക്കളോടൊപ്പം കളിക്കാം</title>
+<title>Kallanum Policeum — Play with Friends</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Malayalam:wght@400;500;600;700;800&family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -43,13 +43,17 @@
 @keyframes handPick{0%{opacity:0;transform:translateY(100px) rotate(9deg) scale(.45)}55%{opacity:1;transform:translateY(-10px) rotate(-3deg) scale(1.03)}100%{opacity:1;transform:translateY(0) rotate(0) scale(1)}}
 @media(max-width:620px){.room-head{padding-right:0;padding-top:48px}.voice-mini{top:0;right:0}.paper-area.shaking .jar{transform:scale(1.3);transform-origin:top center}.paper-area.shaking .jar-scene{height:50vh}.role-card{min-height:56vh}}
 
+
+body[data-theme="light"]{--bg:#eee7d8;--text:#29231b;--muted:#655746;background:radial-gradient(ellipse at 15% 0%,#ffffff 0,transparent 40%),#eee7d8;color:#29231b}
+body[data-theme="light"] .brand{color:#29231b}body[data-theme="light"] .hero p{color:#655746}body[data-theme="light"] .hero .eyebrow{color:#49764a}body[data-theme="light"] .tab{background:#ffffffcc;color:#655746}body[data-theme="light"] .feature{background:#ffffffb8;color:#29231b}body[data-theme="light"] .room-item{background:#ffffffb8;color:#29231b}body[data-theme="light"] .status{background:#fff;color:#3c2816}body[data-theme="light"] .secondary{background:#fff;color:#3c2816}body[data-theme="light"] .suspect{background:#fff;color:#3c2816}
+#themeToggle{white-space:nowrap;padding:9px 11px;font-size:12px}
 </style>
 </head>
 <body>
 <div class="wrap">
   <header class="topbar">
-    <div class="brand"><div class="logo">🕵️</div><span>കള്ളനും <span class="gradient">പോലീസും</span></span></div>
-    <div class="live">● LIVE GAME</div>
+    <div class="brand"><div class="logo">🕵️</div><span>Kallanum <span class="gradient">Policeum</span></span></div>
+    <div style="display:flex;align-items:center;gap:10px"><button id="themeToggle" class="secondary" type="button" aria-label="Switch theme">☀️ Light mode</button><div class="live">● LIVE GAME</div></div>
   </header>
 
   <section id="home">
@@ -86,7 +90,7 @@
       <section class="card" id="publicCard">
         <h2>🌐 Public Rooms</h2>
         <p class="sub">Join a public room waiting for players.</p>
-        <div class="room-list" id="publicRooms"><div class="empty">തുറന്ന മുറികൾ തിരയുന്നു…</div></div>
+        <div class="room-list" id="publicRooms"><div class="empty">Loading public rooms…</div></div>
         <div class="divider"></div>
         <h2>How to Play</h2>
         <p class="sub" style="margin-bottom:0">Everyone draws one secret role. The Police chooses the player they suspect is the Thief. Earn points each round!</p>
@@ -102,8 +106,8 @@
   <section id="game" class="hidden">
     <div class="card">
       <div class="room-head">
-        <div><div class="eyebrow" id="roomPrivacy">സ്വകാര്യ മുറി</div><h2 id="roomTitle" style="margin-top:8px">Friends Room</h2><p class="sub" id="roomSubtitle">സുഹൃത്തുക്കൾ ചേരാൻ കാത്തിരിക്കുന്നു.</p></div>
-        <div class="room-code"><small>മുറിക്കോഡ്</small><strong id="codeText">------</strong><button id="copyCode" class="secondary" style="padding:6px 9px;font-size:11px;margin-top:7px">കോഡ് പകർത്തുക</button></div>
+        <div><div class="eyebrow" id="roomPrivacy">Private Room</div><h2 id="roomTitle" style="margin-top:8px">Friends Room</h2><p class="sub" id="roomSubtitle">Waiting for friends to join.</p></div>
+        <div class="room-code"><small>ROOM CODE</small><strong id="codeText">------</strong><button id="copyCode" class="secondary" style="padding:6px 9px;font-size:11px;margin-top:7px">Copy Code</button></div>
       <div class="voice-mini" id="voiceMini">
         <button id="voiceToggle" class="mic-circle" aria-label="Toggle microphone" title="Microphone">🎙</button>
         <button id="voiceMenuBtn" class="mic-arrow" aria-label="Voice settings" title="Voice settings">▾</button>
@@ -119,18 +123,18 @@
       </div>
       </div>
       <div class="divider"></div>
-      <div class="row-title" style="display:flex;align-items:center;justify-content:space-between"><h2 style="font-size:16px">കളിക്കാർ <span class="pill" id="playerCount">1 / 15</span></h2><span class="sub" id="roundLabel" style="margin:0">5 റൗണ്ട്</span></div>
+      <div class="row-title" style="display:flex;align-items:center;justify-content:space-between"><h2 style="font-size:16px">Players <span class="pill" id="playerCount">1 / 15</span></h2><span class="sub" id="roundLabel" style="margin:0">5 rounds</span></div>
       <div class="players" id="playersList"></div>
-      <div class="status" id="statusBox">സുഹൃത്തുക്കൾക്കായി കാത്തിരിക്കുന്നു…</div>
-      <div id="lobbyActions" class="btnrow"><button class="primary" id="startBtn">കളി തുടങ്ങുക →</button><button class="secondary" id="leaveBtn">മുറി വിടുക</button></div>
+      <div class="status" id="statusBox">Waiting for friends…</div>
+      <div id="lobbyActions" class="btnrow"><button class="primary" id="startBtn">Start Game →</button><button class="secondary" id="leaveBtn">Leave Room</button></div>
       <div id="pickArea" class="hidden">
-        <div class="paper-area" id="paperArea"><div class="jar-scene"><div class="jar-shadow"></div><div class="jar" id="paperJar"><div class="jar-rim"></div><div class="jar-papers"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="jar-gloss"></div></div><div class="drawn-paper" id="drawnPaper"><span>?</span></div></div><h2 style="margin-bottom:7px">നിങ്ങളുടെ കടലാസ് തിരഞ്ഞെടുക്കൂ</h2><p class="sub" id="paperHint">കടലാസുകൾ ജാറിൽ കലക്കുകയാണ്…</p></div>
-        <div id="roleCard" class="role-card hidden"><div class="role-icon" id="roleIcon">🎭</div><div class="role-name" id="roleName">നിങ്ങളുടെ വേഷം</div><div class="role-note" id="roleNote">രഹസ്യമായി സൂക്ഷിക്കൂ!</div><div class="role-points" id="rolePoints">100 പോയിന്റ്</div></div>
-        <button class="primary pick-btn" id="pickBtn">ഒരു കടലാസ് എടുക്കൂ 🎴</button>
+        <div class="paper-area" id="paperArea"><div class="jar-scene"><div class="jar-shadow"></div><div class="jar" id="paperJar"><div class="jar-rim"></div><div class="jar-papers"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="jar-gloss"></div></div><div class="drawn-paper" id="drawnPaper"><span>?</span></div></div><h2 style="margin-bottom:7px">Pick Your Paper</h2><p class="sub" id="paperHint">Shaking the jar…</p></div>
+        <div id="roleCard" class="role-card hidden"><div class="role-icon" id="roleIcon">🎭</div><div class="role-name" id="roleName">Police</div><div class="role-note" id="roleNote">Keep your role secret.</div><div class="role-points" id="rolePoints">100 Points</div></div>
+        <button class="primary pick-btn" id="pickBtn">Pick a Paper 🎴</button>
       </div>
-      <div id="policeArea" class="hidden"><h2>🚨 പോലീസേ, കള്ളനെ കണ്ടെത്തൂ!</h2><p class="sub">കള്ളനെന്ന് സംശയിക്കുന്ന കളിക്കാരനെ തിരഞ്ഞെടുക്കൂ. നിങ്ങളുടെ ഉത്തരം നൽകിയ ശേഷം വേഷം വെളിപ്പെടുത്തും.</p><div class="suspects" id="suspects"></div></div>
-      <div id="resultArea" class="hidden"><div class="result" id="resultBox"></div><h2 style="font-size:16px;margin-bottom:8px">പോയിന്റ് പട്ടിക</h2><div id="scoreboard"></div><div class="btnrow" style="margin-top:18px"><button class="primary" id="nextBtn">അടുത്ത റൗണ്ട് →</button><button class="secondary hidden" id="lobbyBtn">കാത്തിരിപ്പ് മുറിയിലേക്ക്</button></div></div>
-      <div id="finishedArea" class="hidden"><div class="result"><div class="big">🏆</div><h3>കളി കഴിഞ്ഞു!</h3><p id="winnerText">അന്തിമ പോയിന്റുകൾ ഇതാ.</p></div><div id="finalScores"></div><button class="primary" id="againBtn" style="margin-top:18px">കാത്തിരിപ്പ് മുറിയിലേക്ക്</button></div>
+      <div id="policeArea" class="hidden"><h2>🚨 Police, Find the Thief!</h2><p class="sub">Choose the player you suspect is the Thief. Roles will be revealed after your guess.</p><div class="suspects" id="suspects"></div></div>
+      <div id="resultArea" class="hidden"><div class="result" id="resultBox"></div><h2 style="font-size:16px;margin-bottom:8px">Scoreboard</h2><div id="scoreboard"></div><div class="btnrow" style="margin-top:18px"><button class="primary" id="nextBtn">Next Round →</button><button class="secondary hidden" id="lobbyBtn">Back to Lobby</button></div></div>
+      <div id="finishedArea" class="hidden"><div class="result"><div class="big">🏆</div><h3>Game Over!</h3><p id="winnerText">Final scores are ready.</p></div><div id="finalScores"></div><button class="primary" id="againBtn" style="margin-top:18px">Back to Lobby</button></div>
     </div>
   </section>
   <footer>Play with friends and enjoy the challenge ✦ Kallanum Policeum</footer>
@@ -139,33 +143,39 @@
 <script src="/socket.io/socket.io.js"></script>
 <script>
 const socket = io();
+const savedTheme = (()=>{try{return localStorage.getItem("kp-theme")||"dark"}catch(e){return "dark"}})();
+document.body.dataset.theme=savedTheme;
+function updateThemeButton(){const light=document.body.dataset.theme==="light";$("themeToggle").textContent=light?"🌙 Dark mode":"☀️ Light mode"}
+
 let currentCode = null, myId = null, myRole = null, roomState = null, privacy = "private";
 let toastTimer;
 const $ = id => document.getElementById(id);
+updateThemeButton();
+$("themeToggle").addEventListener("click",()=>{const next=document.body.dataset.theme==="light"?"dark":"light";document.body.dataset.theme=next;try{localStorage.setItem("kp-theme",next)}catch(e){}updateThemeButton()});
 const roleNames = {Police:"പോലീസ്",Thief:"കള്ളൻ",King:"രാജാവ്",Minister:"മന്ത്രി",Queen:"റാണി",Doctor:"ഡോക്ടർ",Detective:"ഡിറ്റക്ടീവ്",Guard:"കാവൽക്കാരൻ",Milkman:"പാലക്കാരൻ",Farmer:"കർഷകൻ",Trader:"വ്യാപാരി",Teacher:"അധ്യാപകൻ",Soldier:"സൈനികൻ",Fisherman:"മീൻപിടിത്തക്കാരൻ",Citizen:"സാധാരണക്കാരൻ"};
 const rolePoints = {Police:100,Thief:100,King:1000,Minister:500,Queen:800,Doctor:300,Detective:250,Guard:200,Milkman:150,Farmer:100,Trader:100,Teacher:100,Soldier:100,Fisherman:100,Citizen:50};
 const roleInfo = {
-  Police: {icon:"🚔",note:"നിങ്ങൾ പോലീസാണ്. എല്ലാവരും കടലാസ് എടുത്ത ശേഷം കള്ളനെ തിരഞ്ഞെടുക്കൂ."},
-  Thief: {icon:"🦹",note:"ശാന്തരായിരിക്കൂ! പോലീസ് നിങ്ങളെ കണ്ടെത്താൻ ശ്രമിക്കുന്നു."},
-  King: {icon:"👑",note:"നിങ്ങൾ രാജാവാണ്. നിങ്ങളുടെ വേഷം രഹസ്യമായി സൂക്ഷിക്കൂ."},
-  Minister: {icon:"🎖️",note:"നിങ്ങൾ മന്ത്രിയാണ്. നിങ്ങളുടെ വേഷം രഹസ്യമായി സൂക്ഷിക്കൂ."},
-  Detective: {icon:"🔎",note:"നിങ്ങൾ ഡിറ്റക്ടീവാണ്. നിങ്ങളുടെ വേഷം രഹസ്യമായി സൂക്ഷിക്കൂ."},
-  Queen: {icon:"👸",note:"നിങ്ങൾ റാണിയാണ്. നിങ്ങളുടെ വേഷം രഹസ്യമായി സൂക്ഷിക്കൂ."},
-  Doctor: {icon:"🩺",note:"നിങ്ങൾ ഡോക്ടറാണ്. നിങ്ങളുടെ വേഷം രഹസ്യമായി സൂക്ഷിക്കൂ."},
-  Guard: {icon:"🛡️",note:"നിങ്ങൾ കാവൽക്കാരനാണ്. നിങ്ങളുടെ വേഷം രഹസ്യമായി സൂക്ഷിക്കൂ."},
-  Milkman: {icon:"🥛",note:"നിങ്ങൾ പാലക്കാരനാണ്. നിങ്ങളുടെ വേഷം രഹസ്യമായി സൂക്ഷിക്കൂ."},
-  Farmer: {icon:"🌾",note:"നിങ്ങൾ കർഷകനാണ്. നിങ്ങളുടെ വേഷം രഹസ്യമായി സൂക്ഷിക്കൂ."},
-  Trader: {icon:"🧺",note:"നിങ്ങൾ വ്യാപാരിയാണ്. നിങ്ങളുടെ വേഷം രഹസ്യമായി സൂക്ഷിക്കൂ."},
-  Teacher: {icon:"📚",note:"നിങ്ങൾ അധ്യാപകനാണ്. നിങ്ങളുടെ വേഷം രഹസ്യമായി സൂക്ഷിക്കൂ."},
-  Soldier: {icon:"🎖️",note:"നിങ്ങൾ സൈനികനാണ്. നിങ്ങളുടെ വേഷം രഹസ്യമായി സൂക്ഷിക്കൂ."},
-  Fisherman: {icon:"🎣",note:"നിങ്ങൾ മീൻപിടിത്തക്കാരനാണ്. നിങ്ങളുടെ വേഷം രഹസ്യമായി സൂക്ഷിക്കൂ."},
-  Citizen: {icon:"🧑",note:"നിങ്ങൾ സാധാരണക്കാരനാണ്. നിങ്ങളുടെ വേഷം രഹസ്യമായി സൂക്ഷിക്കൂ."}
+  Police: {icon:"🚔",note:"You are the Police. After everyone draws, choose who you think is the Thief."},
+  Thief: {icon:"🦹",note:"Stay calm! The Police is trying to find you."},
+  King: {icon:"👑",note:"Keep your role secret."},
+  Minister: {icon:"🎖️",note:"Keep your role secret."},
+  Detective: {icon:"🔎",note:"Keep your role secret."},
+  Queen: {icon:"👸",note:"Keep your role secret."},
+  Doctor: {icon:"🩺",note:"Keep your role secret."},
+  Guard: {icon:"🛡️",note:"Keep your role secret."},
+  Milkman: {icon:"🥛",note:"Keep your role secret."},
+  Farmer: {icon:"🌾",note:"Keep your role secret."},
+  Trader: {icon:"🧺",note:"Keep your role secret."},
+  Teacher: {icon:"📚",note:"Keep your role secret."},
+  Soldier: {icon:"🎖️",note:"Keep your role secret."},
+  Fisherman: {icon:"🎣",note:"Keep your role secret."},
+  Citizen: {icon:"🧑",note:"Keep your role secret."}
 };
 let voiceStream=null, voiceEnabled=false, voiceMode="ptt", peers=new Map(), audioContext=null;
 function voiceStatus(t){$("voiceStatus").textContent=t}
 function playPaperSound(){try{const C=window.AudioContext||window.webkitAudioContext;if(!C)return;audioContext=audioContext||new C();const ctx=audioContext;const buffer=ctx.createBuffer(1,ctx.sampleRate*.42,ctx.sampleRate);const data=buffer.getChannelData(0);for(let i=0;i<data.length;i++)data[i]=(Math.random()*2-1)*Math.pow(1-i/data.length,1.8);const src=ctx.createBufferSource();src.buffer=buffer;const filter=ctx.createBiquadFilter();filter.type="bandpass";filter.frequency.value=950;const gain=ctx.createGain();gain.gain.setValueAtTime(.0001,ctx.currentTime);gain.gain.exponentialRampToValueAtTime(.16,ctx.currentTime+.035);gain.gain.exponentialRampToValueAtTime(.0001,ctx.currentTime+.4);src.connect(filter);filter.connect(gain);gain.connect(ctx.destination);src.start();src.stop(ctx.currentTime+.42);const o=ctx.createOscillator(),g=ctx.createGain();o.type="triangle";o.frequency.setValueAtTime(130,ctx.currentTime);o.frequency.exponentialRampToValueAtTime(72,ctx.currentTime+.38);g.gain.setValueAtTime(.035,ctx.currentTime);g.gain.exponentialRampToValueAtTime(.001,ctx.currentTime+.4);o.connect(g);g.connect(ctx.destination);o.start();o.stop(ctx.currentTime+.41)}catch(e){}}
-async function enableVoice(){try{if(!navigator.mediaDevices?.getUserMedia)throw new Error("ഈ ബ്രൗസറിൽ മൈക്രോഫോൺ ലഭ്യമല്ല.");if(!voiceStream)voiceStream=await navigator.mediaDevices.getUserMedia({audio:true});voiceEnabled=true;socket.emit("voice:join");applyVoiceMode();$("voiceEnable").textContent="മൈക്രോഫോൺ ഓഫ് ചെയ്യുക";voiceStatus("മൈക്രോഫോൺ തയ്യാറാണ് · "+(voiceMode==="open"?"എപ്പോഴും ഓൺ":voiceMode==="ptt"?"അമർത്തിപ്പിടിച്ച് സംസാരിക്കുക":"ശബ്ദം ഓഫ്"))}catch(e){toast("മൈക്രോഫോൺ പ്രവർത്തിച്ചില്ല: "+(e.message||"അനുമതി പരിശോധിക്കൂ"));voiceStatus("മൈക്രോഫോൺ അനുമതി നൽകുക. HTTPS ആവശ്യമാണ്.")}}
-function applyVoiceMode(){if(voiceStream)voiceStream.getAudioTracks().forEach(t=>t.enabled=voiceEnabled&&voiceMode==="open");$("talkBtn").disabled=!voiceEnabled||voiceMode!=="ptt";if(voiceMode==="off"){if(voiceStream)voiceStream.getAudioTracks().forEach(t=>t.enabled=false);voiceStatus("ശബ്ദസംസാരം ഓഫ് ആണ്.")}else if(voiceEnabled)voiceStatus(voiceMode==="open"?"മൈക്ക് ഓൺ — എല്ലാവർക്കും കേൾക്കാം.":"സംസാരിക്കാൻ ബട്ടൺ അമർത്തിപ്പിടിക്കൂ.")}
+async function enableVoice(){try{if(!navigator.mediaDevices?.getUserMedia)throw new Error("Microphone is unavailable in this browser.");if(!voiceStream)voiceStream=await navigator.mediaDevices.getUserMedia({audio:true});voiceEnabled=true;socket.emit("voice:join");applyVoiceMode();$("voiceEnable").textContent="Turn microphone off";voiceStatus("Microphone ready · "+(voiceMode==="open"?"Always on":voiceMode==="ptt"?"Hold to talk":"Mic off"))}catch(e){toast("Microphone failed: "+(e.message||"check permissions"));voiceStatus("Allow microphone access. HTTPS is required.")}}
+function applyVoiceMode(){if(voiceStream)voiceStream.getAudioTracks().forEach(t=>t.enabled=voiceEnabled&&voiceMode==="open");$("talkBtn").disabled=!voiceEnabled||voiceMode!=="ptt";if(voiceMode==="off"){if(voiceStream)voiceStream.getAudioTracks().forEach(t=>t.enabled=false);voiceStatus("Microphone is off.")}else if(voiceEnabled)voiceStatus(voiceMode==="open"?"Mic on — everyone can hear you.":"Hold the talk button to speak.")}
 function closePeer(id){const pc=peers.get(id);if(pc){pc.close();peers.delete(id)}}
 function makePeer(id,initiator){if(peers.has(id))return peers.get(id);const pc=new RTCPeerConnection({iceServers:[{urls:"stun:stun.l.google.com:19302"}]});peers.set(id,pc);if(voiceStream)voiceStream.getTracks().forEach(t=>pc.addTrack(t,voiceStream));else pc.addTransceiver("audio",{direction:"recvonly"});pc.onicecandidate=e=>{if(e.candidate)socket.emit("voice:signal",{to:id,signal:{candidate:e.candidate}})};pc.ontrack=e=>{let audio=document.getElementById("audio-"+id);if(!audio){audio=document.createElement("audio");audio.id="audio-"+id;audio.autoplay=true;audio.playsInline=true;document.body.appendChild(audio)}audio.srcObject=e.streams[0];audio.play().catch(()=>{})};pc.onconnectionstatechange=()=>{if(["failed","closed","disconnected"].includes(pc.connectionState)&&pc.connectionState!=="disconnected")closePeer(id)};if(initiator)pc.createOffer().then(o=>pc.setLocalDescription(o)).then(()=>socket.emit("voice:signal",{to:id,signal:{description:pc.localDescription}})).catch(()=>{});return pc}
 function setVoiceMode(mode){voiceMode=mode;document.querySelectorAll("[data-voice-mode]").forEach(b=>b.classList.toggle("selected",b.dataset.voiceMode===mode));applyVoiceMode();}
@@ -190,10 +200,10 @@ $("joinCode").addEventListener("input",e=>e.target.value=e.target.value.toUpperC
 function joinRoom(code,name){if(!name.trim())return toast("Please enter your name first.");if(!code.trim())return toast("Please enter the room code.");socket.emit("room:join",{code:code.trim(),playerName:name.trim()})}
 $("showPublic").onclick=()=>{socket.emit("rooms:list");$("publicCard").scrollIntoView({behavior:"smooth",block:"center"})};
 $("createName").addEventListener("input",e=>{$("joinName").value=e.target.value});
-$("copyCode").onclick=async()=>{try{await navigator.clipboard.writeText(currentCode);toast("മുറിക്കോഡ് പകർത്തി! സുഹൃത്തുക്കൾക്ക് അയക്കൂ.");}catch(e){toast("നിങ്ങളുടെ മുറിക്കോഡ്: "+currentCode)}};
+$("copyCode").onclick=async()=>{try{await navigator.clipboard.writeText(currentCode);toast("Room code copied! Send it to your friends.");}catch(e){toast("Your room code: "+currentCode)}};
 $("startBtn").onclick=()=>socket.emit("game:start");
 $("leaveBtn").onclick=()=>socket.emit("room:leave");
-$("pickBtn").onclick=()=>{try{navigator.vibrate?.(45)}catch(e){}socket.emit("paper:pick");$("pickBtn").disabled=true;$("pickBtn").textContent="കടലാസ് എടുത്തു ✓"};
+$("pickBtn").onclick=()=>{try{navigator.vibrate?.(45)}catch(e){}socket.emit("paper:pick");$("pickBtn").disabled=true;$("pickBtn").textContent="Paper picked ✓"};
 $("nextBtn").onclick=()=>socket.emit("game:next-round");
 $("lobbyBtn").onclick=()=>socket.emit("game:back-to-lobby");
 $("againBtn").onclick=()=>socket.emit("game:back-to-lobby");
@@ -201,38 +211,38 @@ socket.on("room:joined",data=>{currentCode=data.code;myId=data.playerId;showGame
 socket.on("app:error",message=>toast(message));
 socket.on("room:left",()=>{socket.emit("voice:leave");showHome();socket.emit("rooms:list")});
 socket.on("round:new",()=>{playPaperSound();const pa=$("paperArea");pa.classList.remove("shaking","revealing","picked");void pa.offsetWidth;pa.classList.add("shaking");try{navigator.vibrate?.([90,45,90,45,130])}catch(e){}$("pickBtn").disabled=true;$("paperHint").textContent="Shaking the jar…";setTimeout(()=>{pa.classList.remove("shaking");$("pickBtn").disabled=false;$("paperHint").textContent="Pick your paper"},2500);myRole=null;$("roleCard").classList.add("hidden");$("pickBtn").classList.remove("hidden");$("pickBtn").textContent="Pick a paper";$("suspects").innerHTML=""});
-socket.on("role:private",data=>{myRole=data.role;const info=roleInfo[myRole]||roleInfo.Citizen;const pa=$("paperArea");pa.classList.remove("shaking");pa.classList.add("revealing","picked");playPaperSound();try{navigator.vibrate?.([35,25,60])}catch(e){}$("drawnPaper").querySelector("span").textContent=roleNames[myRole]||myRole;$("roleIcon").textContent=info.icon;$("roleName").textContent=roleNames[myRole]||myRole;$("roleNote").textContent=info.note;$("rolePoints").textContent="மூல്യം · "+(rolePoints[myRole]??0).toLocaleString("en-IN")+" പോയിന്റ്";$("roleCard").classList.remove("hidden");$("pickBtn").classList.add("hidden");$("pickBtn").textContent="Paper picked";$("pickBtn").disabled=true});
+socket.on("role:private",data=>{myRole=data.role;const info=roleInfo[myRole]||roleInfo.Citizen;const pa=$("paperArea");pa.classList.remove("shaking");pa.classList.add("revealing","picked");playPaperSound();try{navigator.vibrate?.([35,25,60])}catch(e){}$("drawnPaper").querySelector("span").textContent=roleNames[myRole]||myRole;$("roleIcon").textContent=info.icon;$("roleName").textContent=roleNames[myRole]||myRole;$("roleNote").textContent=info.note;$("rolePoints").textContent=(rolePoints[myRole]??0).toLocaleString("en-IN")+" Points";$("roleCard").classList.remove("hidden");$("pickBtn").classList.add("hidden");$("pickBtn").textContent="Paper picked";$("pickBtn").disabled=true});
 socket.on("police:turn",data=>{if(!roomState)return;renderSuspects(data.players)});
 socket.on("rooms:changed",()=>socket.emit("rooms:list"));
 socket.on("rooms:list",list=>{const root=$("publicRooms");if(!list.length){root.innerHTML='<div class="empty">No public rooms yet. Create a room and invite your friends!</div>';return}root.innerHTML="";list.forEach(r=>{const el=document.createElement("div");el.className="room-item";const info=document.createElement("div");const title=document.createElement("strong");title.textContent=r.name;const small=document.createElement("small");small.textContent=`${r.count}/15 players · ${r.roundsTotal} rounds`;info.append(title,small);const btn=document.createElement("button");btn.className="join-small";btn.textContent="Join";btn.onclick=()=>{switchTab("join");$("joinCode").value=r.code;$("joinName").value=$("createName").value;joinRoom(r.code,$("joinName").value)};el.append(info,btn);root.append(el)})});
 socket.on("room:update",room=>{roomState=room;renderRoom(room)});
 function renderRoom(room){
   document.getElementById("game").classList.toggle("playing-mode",room.phase!=="lobby");
-  $("roomTitle").textContent=room.name;$("roomPrivacy").textContent=(room.privacy==="public"?"തുറന്ന മുറി":"സ്വകാര്യ മുറി");$("roomSubtitle").textContent=room.message||"ഒരുമിച്ച് കളിക്കാം!";$("codeText").textContent=room.code;
-  $("playerCount").textContent=`${room.players.length} / 15`;$("roundLabel").textContent=room.round?`റൗണ്ട് ${room.round} / ${room.roundsTotal}`:`${room.roundsTotal} റൗണ്ട്`;
-  $("playersList").innerHTML="";room.players.forEach((p,i)=>{const el=document.createElement("div");el.className="player";const av=document.createElement("div");av.className="avatar";av.textContent=["🦊","🐼","🐯","🐸","🐙","🦉","🐨","🦁","🐵","🐰","🐻","🐧"][i%12];const info=document.createElement("div");info.style.minWidth="0";const name=document.createElement("div");name.className="player-name";name.textContent=p.name+(p.id===room.hostId?" · ഹോസ്റ്റ്":"")+(p.id===myId?" (നിങ്ങൾ)":"");const meta=document.createElement("div");meta.className="player-meta";meta.textContent=room.phase==="choosing"&&p.ready?"കടലാസ് എടുത്തു ✓":`${p.score} പോയിന്റ്`;info.append(name,meta);el.append(av,info);$("playersList").append(el)});
+  $("roomTitle").textContent=room.name;$("roomPrivacy").textContent=(room.privacy==="public"?"Public Room":"Private Room");$("roomSubtitle").textContent=room.message||"Let’s play together!";$("codeText").textContent=room.code;
+  $("playerCount").textContent=`${room.players.length} / 15`;$("roundLabel").textContent=room.round?`Round ${room.round} / ${room.roundsTotal}`:`${room.roundsTotal} rounds`;
+  $("playersList").innerHTML="";room.players.forEach((p,i)=>{const el=document.createElement("div");el.className="player";const av=document.createElement("div");av.className="avatar";av.textContent=["🦊","🐼","🐯","🐸","🐙","🦉","🐨","🦁","🐵","🐰","🐻","🐧"][i%12];const info=document.createElement("div");info.style.minWidth="0";const name=document.createElement("div");name.className="player-name";name.textContent=p.name+(p.id===room.hostId?" · Host":"")+(p.id===myId?" (You)":"");const meta=document.createElement("div");meta.className="player-meta";meta.textContent=room.phase==="choosing"&&p.ready?"Paper picked ✓":`${p.score} Points`;info.append(name,meta);el.append(av,info);$("playersList").append(el)});
   ["lobbyActions","pickArea","policeArea","resultArea","finishedArea"].forEach(id=>$(id).classList.add("hidden"));
   $("statusBox").classList.remove("hidden");
   if(room.phase==="lobby"){
-    $("statusBox").textContent=room.message||"സുഹൃത്തുക്കൾക്കായി കാത്തിരിക്കുന്നു…";$("lobbyActions").classList.remove("hidden");$("startBtn").disabled=room.hostId!==myId||room.players.length<2;$("startBtn").textContent=room.hostId===myId?"കളി തുടങ്ങുക →":"ഹോസ്റ്റ് കളി തുടങ്ങാൻ കാത്തിരിക്കുന്നു…";
+    $("statusBox").textContent=room.message||"Waiting for friends…";$("lobbyActions").classList.remove("hidden");$("startBtn").disabled=room.hostId!==myId||room.players.length<2;$("startBtn").textContent=room.hostId===myId?"Start Game →":"Waiting for the host to start…";
   }else if(room.phase==="choosing"){
-    $("pickArea").classList.remove("hidden");$("pickBtn").classList.remove("hidden");$("statusBox").textContent=`റൗണ്ട് ${room.round}: നിങ്ങളുടെ കടലാസ് തിരഞ്ഞെടുക്കൂ. വേഷങ്ങൾ രഹസ്യമാണ്.`;$("pickBtn").disabled=!!room.players.find(p=>p.id===myId)?.ready;
-    if(!myRole){$("roleCard").classList.add("hidden");$("pickBtn").textContent="ഒരു കടലാസ് എടുക്കൂ 🎴"}else{$("roleCard").classList.remove("hidden");$("pickBtn").textContent="കടലാസ് എടുത്തു ✓"}
+    $("pickArea").classList.remove("hidden");$("pickBtn").classList.remove("hidden");$("statusBox").textContent=`Round ${room.round}: Pick your paper. Keep your role secret.`;$("pickBtn").disabled=!!room.players.find(p=>p.id===myId)?.ready;
+    if(!myRole){$("roleCard").classList.add("hidden");$("pickBtn").textContent="Pick a Paper 🎴"}else{$("roleCard").classList.remove("hidden");$("pickBtn").textContent="Paper picked ✓"}
   }else if(room.phase==="police-turn"){
     $("statusBox").textContent=room.message;$("pickArea").classList.remove("hidden");$("pickBtn").classList.add("hidden");
     if(room.policeId===myId){$("policeArea").classList.remove("hidden");if(!$("suspects").children.length)renderSuspects(room.players.filter(p=>p.id!==myId).map(p=>({id:p.id,name:p.name})))}else{$("policeArea").classList.add("hidden");$("roleCard").classList.remove("hidden")}
   }else if(room.phase==="result"){
     $("statusBox").textContent=room.message;$("resultArea").classList.remove("hidden");$("pickArea").classList.add("hidden");renderResult(room);
-    $("nextBtn").classList.toggle("hidden",room.hostId!==myId);$("lobbyBtn").classList.toggle("hidden",room.hostId!==myId);$("nextBtn").textContent=room.round>=room.roundsTotal?"കളി അവസാനിപ്പിക്കുക →":"അടുത്ത റൗണ്ട് →";
+    $("nextBtn").classList.toggle("hidden",room.hostId!==myId);$("lobbyBtn").classList.toggle("hidden",room.hostId!==myId);$("nextBtn").textContent=room.round>=room.roundsTotal?"Finish Game →":"Next Round →";
   }else if(room.phase==="finished"){
     $("statusBox").classList.add("hidden");$("finishedArea").classList.remove("hidden");$("pickArea").classList.add("hidden");
-    const sorted=[...room.players].sort((a,b)=>b.score-a.score);$("winnerText").textContent=sorted.length?`${sorted[0].name} leads with ${sorted[0].score} പോയിന്റ്!`:"അന്തിമ പോയിന്റുകൾ തയ്യാറാണ്.";
-    $("finalScores").innerHTML=sorted.map((p,i)=>`<div class="score-row"><span>${i===0?"🥇":i===1?"🥈":i===2?"🥉":"🎮"} ${escapeHtml(p.name)}</span><span class="score">${p.score} പോയിന്റ്</span></div>`).join("");
+    const sorted=[...room.players].sort((a,b)=>b.score-a.score);$("winnerText").textContent=sorted.length?`${sorted[0].name} leads with ${sorted[0].score} Points!`:"Final scores are ready.";
+    $("finalScores").innerHTML=sorted.map((p,i)=>`<div class="score-row"><span>${i===0?"🥇":i===1?"🥈":i===2?"🥉":"🎮"} ${escapeHtml(p.name)}</span><span class="score">${p.score} Points</span></div>`).join("");
     $("againBtn").classList.toggle("hidden",room.hostId!==myId);
   }
 }
-function renderSuspects(players){$("suspects").innerHTML="";players.forEach(p=>{const btn=document.createElement("button");btn.className="suspect";const av=document.createElement("span");av.style.fontSize="24px";av.textContent="🕵️";const name=document.createElement("strong");name.textContent=p.name;btn.append(av,name);btn.onclick=()=>{if(window.confirm(`${p.name} കള്ളനാണെന്ന് ഉറപ്പാണോ?`))socket.emit("police:guess",{playerId:p.id})};$("suspects").append(btn)})}
-function renderResult(room){const r=room.lastResult;if(!r)return;$("resultBox").innerHTML=`<div class="big">${r.correct?"🚔":"🦹"}</div><h3>${r.correct?"കള്ളനെ പിടിച്ചു!":"കള്ളൻ രക്ഷപ്പെട്ടു!"}</h3><p>പോലീസ്: <b>${escapeHtml(r.policeName)}</b><br>കള്ളൻ: <b>${escapeHtml(r.thiefName)}</b><br>പോലീസ് തിരഞ്ഞെടുത്തത്: <b>${escapeHtml(r.guessedName)}</b></p>`;$("scoreboard").innerHTML=[...room.players].sort((a,b)=>b.score-a.score).map((p,i)=>`<div class="score-row"><span>${i===0?"⭐ ":""}${escapeHtml(p.name)}</span><span class="score">${p.score} പോയിന്റ്</span></div>`).join("")}
+function renderSuspects(players){$("suspects").innerHTML="";players.forEach(p=>{const btn=document.createElement("button");btn.className="suspect";const av=document.createElement("span");av.style.fontSize="24px";av.textContent="🕵️";const name=document.createElement("strong");name.textContent=p.name;btn.append(av,name);btn.onclick=()=>{if(window.confirm(`Are you sure ${p.name} is the Thief?`))socket.emit("police:guess",{playerId:p.id})};$("suspects").append(btn)})}
+function renderResult(room){const r=room.lastResult;if(!r)return;$("resultBox").innerHTML=`<div class="big">${r.correct?"🚔":"🦹"}</div><h3>${r.correct?"Thief caught!":"The Thief escaped!"}</h3><p>Police: <b>${escapeHtml(r.policeName)}</b><br>Thief: <b>${escapeHtml(r.thiefName)}</b><br>Police guessed: <b>${escapeHtml(r.guessedName)}</b></p>`;$("scoreboard").innerHTML=[...room.players].sort((a,b)=>b.score-a.score).map((p,i)=>`<div class="score-row"><span>${i===0?"⭐ ":""}${escapeHtml(p.name)}</span><span class="score">${p.score} Points</span></div>`).join("")}
 function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
 socket.on("connect",()=>socket.emit("rooms:list"));
 </script>
