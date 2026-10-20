@@ -192,6 +192,12 @@ function roleDeck(playerCount) {
   const roles = ["Police", "Thief", "King", "Minister", "Queen", "Doctor", "Detective", "Guard", "Milkman", "Farmer", "Trader", "Teacher", "Soldier", "Fisherman", "Citizen"];
   return roles.slice(0, playerCount);
 }
+const rolePoints = Object.freeze({
+  Police: 100, Thief: 100, King: 1000, Minister: 500, Queen: 800,
+  Doctor: 300, Detective: 250, Guard: 200, Milkman: 150,
+  Farmer: 100, Trader: 100, Teacher: 100, Soldier: 100,
+  Fisherman: 100, Citizen: 50
+});
 function shuffle(list) {
   const copy = [...list];
   for (let i = copy.length - 1; i > 0; i--) {
@@ -224,21 +230,23 @@ function startRound(room) {
   io.emit("rooms:changed");
 }
 function finishRound(room, guessId) {
+  if (room.phase !== "police-turn" || !room.players.has(guessId)) return;
   const thief = [...room.secrets.entries()].find(([, role]) => role === "Thief");
   if (!thief) return;
   const thiefId = thief[0];
   const correct = guessId === thiefId;
-  const police = room.players.get(room.policeId);
-  // Traditional role points: King 1000, Minister 500.
-  // Police gets 100 for a correct guess; otherwise the thief gets 100.
+  const scoreChanges = {};
   for (const [playerId, role] of room.secrets.entries()) {
     const player = room.players.get(playerId);
     if (!player) continue;
-    if (role === "King") player.score += 1000;
-    if (role === "Minister") player.score += 500;
+    const points = role === "Police"
+      ? (correct ? rolePoints.Police : 0)
+      : role === "Thief"
+        ? (correct ? 0 : rolePoints.Thief)
+        : (rolePoints[role] || 0);
+    player.score += points;
+    scoreChanges[playerId] = points;
   }
-  if (correct && police) police.score += 100;
-  if (!correct && room.players.has(thiefId)) room.players.get(thiefId).score += 100;
   room.lastResult = {
     policeId: room.policeId,
     thiefId,
@@ -246,10 +254,11 @@ function finishRound(room, guessId) {
     correct,
     policeName: room.players.get(room.policeId)?.name || "പോലീസ്",
     thiefName: room.players.get(thiefId)?.name || "കള്ളൻ",
-    guessedName: room.players.get(guessId)?.name || "അറിയില്ല"
+    guessedName: room.players.get(guessId)?.name || "അറിയില്ല",
+    scoreChanges
   };
   room.phase = "result";
-  room.message = correct ? "Correct! The Police caught the Thief." : "Wrong guess! The Thief gets 100 points.";
+  room.message = correct ? "Correct! The Police caught the Thief." : "Wrong guess! The Thief escaped.";
   emitRoom(room);
   if (room.autoManaged) {
     setTimeout(() => {
