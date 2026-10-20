@@ -47,7 +47,8 @@
 body[data-theme="light"]{--bg:#eee7d8;--text:#29231b;--muted:#655746;background:radial-gradient(ellipse at 15% 0%,#ffffff 0,transparent 40%),#eee7d8;color:#29231b}
 body[data-theme="light"] .brand{color:#29231b}body[data-theme="light"] .hero p{color:#655746}body[data-theme="light"] .hero .eyebrow{color:#49764a}body[data-theme="light"] .tab{background:#ffffffcc;color:#655746}body[data-theme="light"] .feature{background:#ffffffb8;color:#29231b}body[data-theme="light"] .room-item{background:#ffffffb8;color:#29231b}body[data-theme="light"] .status{background:#fff;color:#3c2816}body[data-theme="light"] .secondary{background:#fff;color:#3c2816}body[data-theme="light"] .suspect{background:#fff;color:#3c2816}
 #themeToggle{white-space:nowrap;padding:9px 11px;font-size:12px}
-</style>
+/* Score updates and tactile, mobile-friendly card-table controls */
+.player{transition:transform .22s,box-shadow .22s,border-color .22s;transform:perspective(700px) translateZ(0)}.player:hover{transform:perspective(700px) translateY(-3px) rotateX(2deg);box-shadow:0 12px 24px #0003}.player.score-updated{animation:scorePulse .7s ease-out;border-color:#efba51;box-shadow:0 0 0 3px #efba5135,0 10px 26px #0003}@keyframes scorePulse{0%{transform:scale(.96);background:#f6d888}100%{transform:scale(1)}}.primary,.secondary,.join-small,.suspect{transition:transform .18s,filter .18s,box-shadow .18s}.primary:hover,.secondary:hover,.join-small:hover,.suspect:hover{transform:translateY(-2px);filter:brightness(1.07);box-shadow:0 12px 22px #0003}.player:focus-within,button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #f2bd56;outline-offset:3px}@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important;transition-duration:.01ms!important}}</style>
 </head>
 <body>
 <div class="wrap">
@@ -153,6 +154,7 @@ document.body.dataset.theme=savedTheme;
 function updateThemeButton(){const light=document.body.dataset.theme==="light";$("themeToggle").textContent=light?"🌙 Dark mode":"☀️ Light mode"}
 
 let currentCode = null, myId = null, myRole = null, roomState = null, privacy = "private";
+const scoreSnapshot = new Map();
 let toastTimer;
 const $ = id => document.getElementById(id);
 updateThemeButton();
@@ -228,7 +230,7 @@ function renderRoom(room){
   document.getElementById("game").classList.toggle("playing-mode",room.phase!=="lobby");
   $("roomTitle").textContent=room.name;$("roomPrivacy").textContent=(room.privacy==="public"?"Public Room":"Private Room");$("roomSubtitle").textContent=room.message||"Let’s play together!";$("codeText").textContent=room.code;
   $("playerCount").textContent=`${room.players.length} / 15`;$("roundLabel").textContent=room.round?`Round ${room.round} / ${room.roundsTotal}`:`${room.roundsTotal} rounds`;
-  $("playersList").innerHTML="";room.players.forEach((p,i)=>{const el=document.createElement("div");el.className="player";const av=document.createElement("div");av.className="avatar";av.textContent=["🦊","🐼","🐯","🐸","🐙","🦉","🐨","🦁","🐵","🐰","🐻","🐧"][i%12];const info=document.createElement("div");info.style.minWidth="0";const name=document.createElement("div");name.className="player-name";name.textContent=p.name+(p.id===room.hostId?" · Host":"")+(p.id===myId?" (You)":"");const meta=document.createElement("div");meta.className="player-meta";meta.textContent=room.phase==="choosing"&&p.ready?"Paper picked ✓":`${p.score} Points`;info.append(name,meta);el.append(av,info);$("playersList").append(el)});
+  $("playersList").innerHTML="";room.players.forEach((p,i)=>{const el=document.createElement("div");const previousScore=scoreSnapshot.get(p.id);el.className="player"+(previousScore!==undefined&&previousScore!==p.score?" score-updated":"");scoreSnapshot.set(p.id,p.score);const av=document.createElement("div");av.className="avatar";av.textContent=["🦊","🐼","🐯","🐸","🐙","🦉","🐨","🦁","🐵","🐰","🐻","🐧"][i%12];const info=document.createElement("div");info.style.minWidth="0";const name=document.createElement("div");name.className="player-name";name.textContent=p.name+(p.id===room.hostId?" · Host":"")+(p.id===myId?" (You)":"");const meta=document.createElement("div");meta.className="player-meta";meta.textContent=room.phase==="choosing"&&p.ready?"Paper picked ✓":`${p.score} Points`;info.append(name,meta);el.append(av,info);$("playersList").append(el)});
   ["lobbyActions","pickArea","policeArea","resultArea","finishedArea"].forEach(id=>$(id).classList.add("hidden"));
   $("statusBox").classList.remove("hidden");
   if(room.phase==="lobby"){
@@ -255,12 +257,12 @@ function renderRoom(room){
   }else if(room.phase==="finished"){
     $("statusBox").classList.add("hidden");$("finishedArea").classList.remove("hidden");$("pickArea").classList.add("hidden");
     const sorted=[...room.players].sort((a,b)=>b.score-a.score);$("winnerText").textContent=sorted.length?`${sorted[0].name} leads with ${sorted[0].score} Points!`:"Final scores are ready.";
-    $("finalScores").innerHTML=sorted.map((p,i)=>`<div class="score-row"><span>${i===0?"🥇":i===1?"🥈":i===2?"🥉":"🎮"} ${escapeHtml(p.name)}</span><span class="score">${p.score} Points</span></div>`).join("");
+    $("finalScores").innerHTML=sorted.map((p,i)=>`<div class="score-row"><span>${i===0?"🥇":i===1?"🥈":i===2?"🥉":"🎮"} ${escapeHtml(p.name)}</span><span class="score">${Number(r.scoreChanges?.[p.id]||0)>0?"+"+Number(r.scoreChanges[p.id]).toLocaleString("en-IN")+" · ":""}${p.score.toLocaleString("en-IN")} Points</span></div>`).join("");
     $("againBtn").classList.toggle("hidden",room.autoManaged||room.hostId!==myId);
   }
 }
 function renderSuspects(players){$("suspects").innerHTML="";players.forEach(p=>{const btn=document.createElement("button");btn.className="suspect";const av=document.createElement("span");av.style.fontSize="24px";av.textContent="🕵️";const name=document.createElement("strong");name.textContent=p.name;btn.append(av,name);btn.onclick=()=>{if(window.confirm(`Are you sure ${p.name} is the Thief?`))socket.emit("police:guess",{playerId:p.id})};$("suspects").append(btn)})}
-function renderResult(room){const r=room.lastResult;if(!r)return;$("resultBox").innerHTML=`<div class="big">${r.correct?"🚔":"🦹"}</div><h3>${r.correct?"Thief caught!":"The Thief escaped!"}</h3><p>Police: <b>${escapeHtml(r.policeName)}</b><br>Thief: <b>${escapeHtml(r.thiefName)}</b><br>Police guessed: <b>${escapeHtml(r.guessedName)}</b></p>`;$("scoreboard").innerHTML=[...room.players].sort((a,b)=>b.score-a.score).map((p,i)=>`<div class="score-row"><span>${i===0?"⭐ ":""}${escapeHtml(p.name)}</span><span class="score">${p.score} Points</span></div>`).join("")}
+function renderResult(room){const r=room.lastResult;if(!r)return;$("resultBox").innerHTML=`<div class="big">${r.correct?"🚔":"🦹"}</div><h3>${r.correct?"Thief caught!":"The Thief escaped!"}</h3><p>Police: <b>${escapeHtml(r.policeName)}</b><br>Thief: <b>${escapeHtml(r.thiefName)}</b><br>Police guessed: <b>${escapeHtml(r.guessedName)}</b></p>`;$("scoreboard").innerHTML=[...room.players].sort((a,b)=>b.score-a.score).map((p,i)=>`<div class="score-row"><span>${i===0?"⭐ ":""}${escapeHtml(p.name)}</span><span class="score">${Number(r.scoreChanges?.[p.id]||0)>0?"+"+Number(r.scoreChanges[p.id]).toLocaleString("en-IN")+" · ":""}${p.score.toLocaleString("en-IN")} Points</span></div>`).join("")}
 function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
 socket.on("connect",()=>socket.emit("rooms:list"));
 </script>
